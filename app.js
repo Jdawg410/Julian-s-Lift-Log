@@ -123,14 +123,14 @@ function renderExerciseCard(id) {
     setInputs = Array.from({ length: ex.sets }).map((_, i) => `
       <div class="set-input-wrap">
         <label>Set ${i + 1} L</label>
-        <div class="rep-stepper" data-exercise="${id}" data-set="${i}" data-side="L" data-value="${ex.reps}">
-          ${repStepper(ex.reps)}
+        <div class="rep-stepper" data-exercise="${id}" data-set="${i}" data-side="L" data-value="0">
+          ${repStepper(0)}
         </div>
       </div>
       <div class="set-input-wrap">
         <label>Set ${i + 1} R</label>
-        <div class="rep-stepper" data-exercise="${id}" data-set="${i}" data-side="R" data-value="${ex.reps}">
-          ${repStepper(ex.reps)}
+        <div class="rep-stepper" data-exercise="${id}" data-set="${i}" data-side="R" data-value="0">
+          ${repStepper(0)}
         </div>
       </div>
     `).join('');
@@ -138,8 +138,8 @@ function renderExerciseCard(id) {
     setInputs = Array.from({ length: ex.sets }).map((_, i) => `
       <div class="set-input-wrap">
         <label>Set ${i + 1}</label>
-        <div class="rep-stepper" data-exercise="${id}" data-set="${i}" data-value="${ex.reps}">
-          ${repStepper(ex.reps)}
+        <div class="rep-stepper" data-exercise="${id}" data-set="${i}" data-value="0">
+          ${repStepper(0)}
         </div>
       </div>
     `).join('');
