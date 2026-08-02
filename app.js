@@ -1,19 +1,20 @@
 const STORAGE_KEY = 'liftlog.state.v1';
-const REP_TARGET = 5;
 
 const DAY_EXERCISES = {
-  A: ['squat', 'bench', 'row'],
-  B: ['squat', 'ohp', 'deadlift'],
+  A: ['squat', 'bench', 'row', 'deadhang'],
+  B: ['squat', 'ohp', 'deadlift', 'slrdl'],
 };
 
 function defaultState() {
   return {
     exercises: {
-      squat:    { name: 'Squat',           weight: 45, increment: 5,  sets: 5, fails: 0 },
-      bench:    { name: 'Bench Press',     weight: 45, increment: 5,  sets: 5, fails: 0 },
-      row:      { name: 'Barbell Row',     weight: 65, increment: 5,  sets: 5, fails: 0 },
-      ohp:      { name: 'Overhead Press',  weight: 45, increment: 5,  sets: 5, fails: 0 },
-      deadlift: { name: 'Deadlift',        weight: 95, increment: 10, sets: 1, fails: 0 },
+      squat:    { name: 'Squat',           type: 'sets',       weight: 45, increment: 5,  sets: 5, reps: 5, fails: 0 },
+      bench:    { name: 'Bench Press',     type: 'sets',       weight: 45, increment: 5,  sets: 5, reps: 5, fails: 0 },
+      row:      { name: 'Barbell Row',     type: 'sets',       weight: 65, increment: 5,  sets: 5, reps: 5, fails: 0 },
+      ohp:      { name: 'Overhead Press',  type: 'sets',       weight: 45, increment: 5,  sets: 5, reps: 5, fails: 0 },
+      deadlift: { name: 'Deadlift',        type: 'sets',       weight: 95, increment: 10, sets: 1, reps: 5, fails: 0 },
+      deadhang: { name: 'Dead Hang',       type: 'hold',       sets: 3 },
+      slrdl:    { name: 'Single-Leg RDL',  type: 'unilateral', weight: 15, increment: 5,  sets: 2, reps: 8, fails: 0 },
     },
     nextWorkout: 'A',
     history: [],
@@ -24,7 +25,15 @@ function loadState() {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return defaultState();
   try {
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    const defaults = defaultState();
+    parsed.exercises = parsed.exercises || {};
+    Object.entries(defaults.exercises).forEach(([id, ex]) => {
+      if (!parsed.exercises[id]) parsed.exercises[id] = ex;
+    });
+    if (!parsed.history) parsed.history = [];
+    if (!parsed.nextWorkout) parsed.nextWorkout = 'A';
+    return parsed;
   } catch {
     return defaultState();
   }
@@ -73,31 +82,70 @@ function render() {
   attachHandlers();
 }
 
-function renderToday() {
-  const day = state.nextWorkout;
-  const exerciseIds = DAY_EXERCISES[day];
-  const cards = exerciseIds.map(id => {
-    const ex = state.exercises[id];
-    const setInputs = Array.from({ length: ex.sets }).map((_, i) => `
+function exerciseSubtitle(ex) {
+  if (ex.type === 'hold') return `${ex.sets} sets · max time`;
+  if (ex.type === 'unilateral') return `${ex.sets} sets × ${ex.reps} reps per side`;
+  return `${ex.sets} ${ex.sets === 1 ? 'set' : 'sets'} × ${ex.reps} reps`;
+}
+
+function renderExerciseCard(id) {
+  const ex = state.exercises[id];
+
+  let setInputs;
+  if (ex.type === 'hold') {
+    setInputs = Array.from({ length: ex.sets }).map((_, i) => `
+      <div class="set-input-wrap">
+        <label>Set ${i + 1}</label>
+        <input class="rep-input" type="number" inputmode="numeric" min="0" max="600"
+               placeholder="sec" data-exercise="${id}" data-set="${i}" data-hold="true">
+      </div>
+    `).join('');
+  } else if (ex.type === 'unilateral') {
+    setInputs = Array.from({ length: ex.sets }).map((_, i) => `
+      <div class="set-input-wrap">
+        <label>Set ${i + 1} L</label>
+        <input class="rep-input" type="number" inputmode="numeric" min="0" max="30"
+               value="${ex.reps}" data-exercise="${id}" data-set="${i}" data-side="L">
+      </div>
+      <div class="set-input-wrap">
+        <label>Set ${i + 1} R</label>
+        <input class="rep-input" type="number" inputmode="numeric" min="0" max="30"
+               value="${ex.reps}" data-exercise="${id}" data-set="${i}" data-side="R">
+      </div>
+    `).join('');
+  } else {
+    setInputs = Array.from({ length: ex.sets }).map((_, i) => `
       <div class="set-input-wrap">
         <label>Set ${i + 1}</label>
         <input class="rep-input" type="number" inputmode="numeric" min="0" max="20"
-               value="${REP_TARGET}" data-exercise="${id}" data-set="${i}">
+               value="${ex.reps}" data-exercise="${id}" data-set="${i}">
       </div>
     `).join('');
-    return `
-      <div class="card" data-exercise-card="${id}">
-        <div class="card-title-row">
-          <h3>${ex.name}</h3>
-          <div>
-            <input class="weight-input" type="number" step="5" min="0"
-                   value="${ex.weight}" data-weight-for="${id}"> lb
-          </div>
-        </div>
-        <div class="sets-row">${setInputs}</div>
+  }
+
+  const weightField = ex.type === 'hold' ? '' : `
+    <div>
+      <input class="weight-input" type="number" step="5" min="0"
+             value="${ex.weight}" data-weight-for="${id}"> lb
+    </div>
+  `;
+
+  return `
+    <div class="card" data-exercise-card="${id}">
+      <div class="card-title-row">
+        <h3>${ex.name}</h3>
+        ${weightField}
       </div>
-    `;
-  }).join('');
+      <p class="subtext" style="margin-bottom:10px;">${exerciseSubtitle(ex)}</p>
+      <div class="sets-row">${setInputs}</div>
+    </div>
+  `;
+}
+
+function renderToday() {
+  const day = state.nextWorkout;
+  const exerciseIds = DAY_EXERCISES[day];
+  const cards = exerciseIds.map(renderExerciseCard).join('');
 
   return `
     <h2>Workout ${day}</h2>
@@ -112,13 +160,33 @@ function renderHistory() {
     return `<div class="empty-state">No workouts logged yet.<br>Finish your first one on the Today tab.</div>`;
   }
   const entries = state.history.slice().reverse().map(entry => {
-    const lifts = Object.entries(entry.lifts).map(([id, lift]) => `
-      <div class="history-lift-row">
-        <span>${lift.name} &middot; ${lift.weight} lb</span>
-        <span class="reps-list">${lift.reps.join('-')}</span>
-        <span class="pill ${lift.success ? 'good' : 'bad'}">${lift.success ? 'Hit it' : 'Missed'}</span>
-      </div>
-    `).join('');
+    const lifts = Object.entries(entry.lifts).map(([id, lift]) => {
+      if (lift.type === 'hold') {
+        return `
+          <div class="history-lift-row">
+            <span>${lift.name}</span>
+            <span class="reps-list">${lift.times.map(t => t + 's').join(' · ')}</span>
+          </div>
+        `;
+      }
+      if (lift.type === 'unilateral') {
+        const pairs = lift.repsL.map((l, i) => `${l}/${lift.repsR[i]}`).join(', ');
+        return `
+          <div class="history-lift-row">
+            <span>${lift.name} &middot; ${lift.weight} lb</span>
+            <span class="reps-list">${pairs}</span>
+            <span class="pill ${lift.success ? 'good' : 'bad'}">${lift.success ? 'Hit it' : 'Missed'}</span>
+          </div>
+        `;
+      }
+      return `
+        <div class="history-lift-row">
+          <span>${lift.name} &middot; ${lift.weight} lb</span>
+          <span class="reps-list">${lift.reps.join('-')}</span>
+          <span class="pill ${lift.success ? 'good' : 'bad'}">${lift.success ? 'Hit it' : 'Missed'}</span>
+        </div>
+      `;
+    }).join('');
     return `
       <div class="card">
         <div class="history-entry-header">
@@ -133,21 +201,31 @@ function renderHistory() {
 }
 
 function renderSettings() {
-  const rows = Object.entries(state.exercises).map(([id, ex]) => `
-    <div class="settings-row">
-      <span>${ex.name}</span>
-      <div class="fields">
-        <div>
-          <label>Weight</label>
-          <input class="weight-input" type="number" step="5" min="0" value="${ex.weight}" data-setting-weight="${id}">
+  const rows = Object.entries(state.exercises).map(([id, ex]) => {
+    if (ex.type === 'hold') {
+      return `
+        <div class="settings-row">
+          <span>${ex.name}</span>
+          <span class="subtext">bodyweight &middot; logged only</span>
         </div>
-        <div>
-          <label>+ per win</label>
-          <input class="weight-input" type="number" step="5" min="0" value="${ex.increment}" data-setting-increment="${id}">
+      `;
+    }
+    return `
+      <div class="settings-row">
+        <span>${ex.name}</span>
+        <div class="fields">
+          <div>
+            <label>Weight</label>
+            <input class="weight-input" type="number" step="5" min="0" value="${ex.weight}" data-setting-weight="${id}">
+          </div>
+          <div>
+            <label>+ per win</label>
+            <input class="weight-input" type="number" step="5" min="0" value="${ex.increment}" data-setting-increment="${id}">
+          </div>
         </div>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 
   return `
     <h2>Settings</h2>
@@ -201,28 +279,40 @@ function finishWorkout() {
 
   exerciseIds.forEach(id => {
     const ex = state.exercises[id];
+
+    if (ex.type === 'hold') {
+      const times = [];
+      document.querySelectorAll(`[data-exercise="${id}"][data-hold="true"]`).forEach(input => {
+        times.push(Number(input.value) || 0);
+      });
+      lifts[id] = { name: ex.name, type: 'hold', times };
+      return;
+    }
+
+    if (ex.type === 'unilateral') {
+      const weightInput = document.querySelector(`[data-weight-for="${id}"]`);
+      const weightUsed = Number(weightInput.value) || ex.weight;
+      const repsL = [];
+      const repsR = [];
+      for (let i = 0; i < ex.sets; i++) {
+        repsL.push(Number(document.querySelector(`[data-exercise="${id}"][data-set="${i}"][data-side="L"]`).value) || 0);
+        repsR.push(Number(document.querySelector(`[data-exercise="${id}"][data-set="${i}"][data-side="R"]`).value) || 0);
+      }
+      const success = repsL.every(r => r >= ex.reps) && repsR.every(r => r >= ex.reps);
+      lifts[id] = { name: ex.name, type: 'unilateral', weight: weightUsed, repsL, repsR, success };
+      progressExercise(ex, weightUsed, success);
+      return;
+    }
+
     const weightInput = document.querySelector(`[data-weight-for="${id}"]`);
     const weightUsed = Number(weightInput.value) || ex.weight;
     const reps = [];
-    document.querySelectorAll(`[data-exercise="${id}"]`).forEach(input => {
+    document.querySelectorAll(`[data-exercise="${id}"]:not([data-hold])`).forEach(input => {
       reps.push(Number(input.value) || 0);
     });
-    const success = reps.every(r => r >= REP_TARGET);
-
-    lifts[id] = { name: ex.name, weight: weightUsed, reps, success };
-
-    if (success) {
-      ex.weight = weightUsed + ex.increment;
-      ex.fails = 0;
-    } else {
-      ex.fails += 1;
-      if (ex.fails >= 3) {
-        ex.weight = round5(weightUsed * 0.9);
-        ex.fails = 0;
-      } else {
-        ex.weight = weightUsed;
-      }
-    }
+    const success = reps.every(r => r >= ex.reps);
+    lifts[id] = { name: ex.name, type: 'sets', weight: weightUsed, reps, success };
+    progressExercise(ex, weightUsed, success);
   });
 
   state.history.push({ date: new Date().toISOString(), workout: day, lifts });
@@ -230,6 +320,21 @@ function finishWorkout() {
   saveState();
   showToast('Workout saved');
   render();
+}
+
+function progressExercise(ex, weightUsed, success) {
+  if (success) {
+    ex.weight = weightUsed + ex.increment;
+    ex.fails = 0;
+  } else {
+    ex.fails += 1;
+    if (ex.fails >= 3) {
+      ex.weight = round5(weightUsed * 0.9);
+      ex.fails = 0;
+    } else {
+      ex.weight = weightUsed;
+    }
+  }
 }
 
 function exportData() {
