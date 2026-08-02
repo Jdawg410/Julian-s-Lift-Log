@@ -2,6 +2,7 @@ const STORAGE_KEY = 'liftlog.state.v1';
 
 function defaultState() {
   return {
+    userName: 'Julian',
     exercises: {
       squat:    { name: 'Squat',           type: 'sets',       weight: 45, increment: 5,  sets: 5, reps: 5, fails: 0 },
       bench:    { name: 'Bench Press',     type: 'sets',       weight: 45, increment: 5,  sets: 5, reps: 5, fails: 0 },
@@ -33,6 +34,7 @@ function loadState() {
     if (!parsed.program) parsed.program = defaults.program;
     if (!parsed.history) parsed.history = [];
     if (!parsed.nextWorkout) parsed.nextWorkout = 'A';
+    if (!parsed.userName) parsed.userName = defaults.userName;
     return parsed;
   } catch {
     return defaultState();
@@ -82,7 +84,17 @@ function showToast(msg) {
   }, 1800);
 }
 
+function applyIdentity() {
+  const title = `${state.userName}'s Lift Log`;
+  document.title = title;
+  const appTitle = document.getElementById('app-title');
+  if (appTitle) appTitle.textContent = title;
+  const appleMeta = document.getElementById('apple-title-meta');
+  if (appleMeta) appleMeta.setAttribute('content', title);
+}
+
 function render() {
+  applyIdentity();
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === activeTab);
   });
@@ -261,6 +273,12 @@ function renderSettings() {
   const rows = Object.keys(state.exercises).map(renderSettingsExerciseRow).join('');
 
   return `
+    <h2>Your Name</h2>
+    <p class="subtext">Used for the app title and your phone's home screen icon label. Change this before adding it to your home screen so it shows your own name instead of Julian's.</p>
+    <div class="card">
+      <input type="text" id="user-name-input" value="${state.userName}" placeholder="Your name">
+    </div>
+
     <h2>Exercises</h2>
     <p class="subtext">Adjust weights, assign each exercise to Day A/B, or remove it.</p>
     <div class="card">${rows}</div>
@@ -384,6 +402,15 @@ function attachHandlers() {
 
   const addExerciseBtn = document.getElementById('add-exercise-btn');
   if (addExerciseBtn) addExerciseBtn.onclick = addExercise;
+
+  const userNameInput = document.getElementById('user-name-input');
+  if (userNameInput) {
+    userNameInput.onchange = () => {
+      state.userName = userNameInput.value.trim() || 'Julian';
+      saveState();
+      applyIdentity();
+    };
+  }
 
   const exportBtn = document.getElementById('export-btn');
   if (exportBtn) exportBtn.onclick = exportData;
