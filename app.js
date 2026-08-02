@@ -268,6 +268,17 @@ function handleImport(e) {
 
 render();
 
+(function animateHeaderSprite() {
+  const sprite = document.getElementById('header-sprite');
+  if (!sprite) return;
+  const frames = ['icons/sprite-a.png', 'icons/sprite-b.png'];
+  let i = 0;
+  setInterval(() => {
+    i = (i + 1) % frames.length;
+    sprite.src = frames[i];
+  }, 450);
+})();
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('service-worker.js').catch(() => {});

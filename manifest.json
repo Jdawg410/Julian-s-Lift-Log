@@ -1,6 +1,6 @@
 {
-  "name": "LiftLog",
-  "short_name": "LiftLog",
+  "name": "Julian's Lift Log",
+  "short_name": "Lift Log",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
