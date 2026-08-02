@@ -1,4 +1,4 @@
-const CACHE_NAME = 'liftlog-v3';
+const CACHE_NAME = 'liftlog-v4';
 const ASSETS = [
   './',
   './index.html',
@@ -9,6 +9,7 @@ const ASSETS = [
   './icons/icon-512.png',
   './icons/sprite-a.png',
   './icons/sprite-b.png',
+  './icons/bg-tile.png',
 ];
 
 self.addEventListener('install', event => {
