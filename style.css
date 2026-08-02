@@ -1,0 +1,210 @@
+:root {
+  color-scheme: dark;
+  --bg: #0f172a;
+  --card: #1e293b;
+  --card-border: #334155;
+  --text: #e2e8f0;
+  --text-dim: #94a3b8;
+  --accent: #3b82f6;
+  --good: #22c55e;
+  --bad: #ef4444;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  padding-bottom: 76px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app-header {
+  padding: env(safe-area-inset-top, 16px) 16px 12px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+#view {
+  padding: 16px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+h2 { font-size: 18px; margin: 0 0 4px; }
+.subtext { color: var(--text-dim); font-size: 13px; margin: 0 0 16px; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.card-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.card-title-row h3 { margin: 0; font-size: 16px; }
+
+.weight-input {
+  width: 72px;
+  text-align: center;
+  font-size: 16px;
+  padding: 6px;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  background: #0b1220;
+  color: var(--text);
+}
+
+.sets-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.set-input-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.set-input-wrap label {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.rep-input {
+  width: 44px;
+  text-align: center;
+  font-size: 16px;
+  padding: 8px 4px;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  background: #0b1220;
+  color: var(--text);
+}
+
+.btn {
+  display: inline-block;
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  background: var(--accent);
+  color: white;
+  margin-top: 8px;
+}
+
+.btn.secondary {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  color: var(--text);
+}
+
+.btn.danger-text { background: none; color: var(--bad); border: 1px solid var(--bad); }
+
+.pill {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+.pill.good { background: rgba(34,197,94,0.15); color: var(--good); }
+.pill.bad { background: rgba(239,68,68,0.15); color: var(--bad); }
+
+.history-entry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.history-entry-header .date { font-weight: 600; }
+.history-entry-header .day { color: var(--text-dim); font-size: 13px; }
+
+.history-lift-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-top: 1px solid var(--card-border);
+  font-size: 14px;
+}
+.history-lift-row:first-of-type { border-top: none; }
+
+.reps-list { color: var(--text-dim); font-size: 13px; }
+
+.empty-state {
+  text-align: center;
+  color: var(--text-dim);
+  padding: 40px 20px;
+}
+
+.settings-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-top: 1px solid var(--card-border);
+}
+.settings-row:first-of-type { border-top: none; }
+
+.settings-row .fields { display: flex; gap: 8px; align-items: center; }
+.settings-row label { font-size: 11px; color: var(--text-dim); display: block; margin-bottom: 2px; }
+
+.tabbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  background: var(--card);
+  border-top: 1px solid var(--card-border);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.tab-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  padding: 14px 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.tab-btn.active { color: var(--accent); }
+
+.toast {
+  position: fixed;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--good);
+  color: #06280f;
+  font-weight: 600;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.toast.show { opacity: 1; }
+
+input[type=file] { color: var(--text-dim); font-size: 13px; }
