@@ -99,12 +99,9 @@ function exerciseSubtitle(ex) {
   return `${ex.sets} ${ex.sets === 1 ? 'set' : 'sets'} × ${ex.reps} reps`;
 }
 
-function repStepper(value) {
-  return `
-    <button type="button" class="stepper-btn" data-delta="-1">&minus;</button>
-    <span class="stepper-value">${value}</span>
-    <button type="button" class="stepper-btn" data-delta="1">+</button>
-  `;
+function repTapButton(id, setIndex, target, side) {
+  const sideAttr = side ? ` data-side="${side}"` : '';
+  return `<button type="button" class="rep-tap" data-exercise="${id}" data-set="${setIndex}"${sideAttr} data-value="0" data-target="${target}">0</button>`;
 }
 
 function renderExerciseCard(id) {
@@ -123,24 +120,18 @@ function renderExerciseCard(id) {
     setInputs = Array.from({ length: ex.sets }).map((_, i) => `
       <div class="set-input-wrap">
         <label>Set ${i + 1} L</label>
-        <div class="rep-stepper" data-exercise="${id}" data-set="${i}" data-side="L" data-value="0">
-          ${repStepper(0)}
-        </div>
+        ${repTapButton(id, i, ex.reps, 'L')}
       </div>
       <div class="set-input-wrap">
         <label>Set ${i + 1} R</label>
-        <div class="rep-stepper" data-exercise="${id}" data-set="${i}" data-side="R" data-value="0">
-          ${repStepper(0)}
-        </div>
+        ${repTapButton(id, i, ex.reps, 'R')}
       </div>
     `).join('');
   } else {
     setInputs = Array.from({ length: ex.sets }).map((_, i) => `
       <div class="set-input-wrap">
         <label>Set ${i + 1}</label>
-        <div class="rep-stepper" data-exercise="${id}" data-set="${i}" data-value="0">
-          ${repStepper(0)}
-        </div>
+        ${repTapButton(id, i, ex.reps)}
       </div>
     `).join('');
   }
@@ -327,12 +318,14 @@ function attachHandlers() {
   const finishBtn = document.getElementById('finish-btn');
   if (finishBtn) finishBtn.onclick = finishWorkout;
 
-  document.querySelectorAll('.stepper-btn').forEach(btn => {
+  document.querySelectorAll('.rep-tap').forEach(btn => {
     btn.onclick = () => {
-      const stepper = btn.closest('.rep-stepper');
-      const next = Math.max(0, Number(stepper.dataset.value) + Number(btn.dataset.delta));
-      stepper.dataset.value = next;
-      stepper.querySelector('.stepper-value').textContent = next;
+      const target = Number(btn.dataset.target);
+      let next = Number(btn.dataset.value) + 1;
+      if (next > target) next = 0;
+      btn.dataset.value = next;
+      btn.textContent = next;
+      btn.classList.toggle('hit', next === target && target > 0);
     };
   });
 
@@ -448,8 +441,8 @@ function finishWorkout() {
       const repsL = [];
       const repsR = [];
       for (let i = 0; i < ex.sets; i++) {
-        repsL.push(Number(document.querySelector(`.rep-stepper[data-exercise="${id}"][data-set="${i}"][data-side="L"]`).dataset.value) || 0);
-        repsR.push(Number(document.querySelector(`.rep-stepper[data-exercise="${id}"][data-set="${i}"][data-side="R"]`).dataset.value) || 0);
+        repsL.push(Number(document.querySelector(`.rep-tap[data-exercise="${id}"][data-set="${i}"][data-side="L"]`).dataset.value) || 0);
+        repsR.push(Number(document.querySelector(`.rep-tap[data-exercise="${id}"][data-set="${i}"][data-side="R"]`).dataset.value) || 0);
       }
       const success = repsL.every(r => r >= ex.reps) && repsR.every(r => r >= ex.reps);
       lifts[id] = { name: ex.name, type: 'unilateral', weight: weightUsed, repsL, repsR, success };
@@ -461,7 +454,7 @@ function finishWorkout() {
     const weightUsed = Number(weightInput.value) || ex.weight;
     const reps = [];
     for (let i = 0; i < ex.sets; i++) {
-      reps.push(Number(document.querySelector(`.rep-stepper[data-exercise="${id}"][data-set="${i}"]`).dataset.value) || 0);
+      reps.push(Number(document.querySelector(`.rep-tap[data-exercise="${id}"][data-set="${i}"]`).dataset.value) || 0);
     }
     const success = reps.every(r => r >= ex.reps);
     lifts[id] = { name: ex.name, type: 'sets', weight: weightUsed, reps, success };
