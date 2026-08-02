@@ -107,6 +107,32 @@ h2 { font-size: 18px; margin: 0 0 4px; }
   color: var(--text);
 }
 
+.rep-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 170px;
+}
+
+.rep-btn {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  border: 1px solid var(--card-border);
+  background: #0b1220;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0;
+}
+
+.rep-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
 .btn {
   display: inline-block;
   width: 100%;
@@ -127,6 +153,14 @@ h2 { font-size: 18px; margin: 0 0 4px; }
 }
 
 .btn.danger-text { background: none; color: var(--bad); border: 1px solid var(--bad); }
+
+.btn.small {
+  display: inline-block;
+  width: auto;
+  padding: 6px 10px;
+  font-size: 12px;
+  margin-top: 0;
+}
 
 .pill {
   font-size: 12px;
@@ -166,16 +200,47 @@ h2 { font-size: 18px; margin: 0 0 4px; }
 }
 
 .settings-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 0;
+  padding: 12px 0;
   border-top: 1px solid var(--card-border);
 }
 .settings-row:first-of-type { border-top: none; }
 
-.settings-row .fields { display: flex; gap: 8px; align-items: center; }
+.exercise-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.settings-row .fields { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
 .settings-row label { font-size: 11px; color: var(--text-dim); display: block; margin-bottom: 2px; }
+
+.day-toggles {
+  display: flex;
+  gap: 16px;
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.day-toggles label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--text);
+}
+
+#new-ex-name, #new-ex-type, #new-ex-sets, #new-ex-reps, #new-ex-weight, #new-ex-increment {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  background: #0b1220;
+  color: var(--text);
+  font-size: 15px;
+  margin-top: 4px;
+}
 
 .tabbar {
   position: fixed;

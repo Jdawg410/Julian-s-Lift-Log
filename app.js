@@ -1,10 +1,5 @@
 const STORAGE_KEY = 'liftlog.state.v1';
 
-const DAY_EXERCISES = {
-  A: ['squat', 'bench', 'row', 'deadhang'],
-  B: ['squat', 'ohp', 'deadlift', 'slrdl'],
-};
-
 function defaultState() {
   return {
     exercises: {
@@ -15,6 +10,10 @@ function defaultState() {
       deadlift: { name: 'Deadlift',        type: 'sets',       weight: 95, increment: 10, sets: 1, reps: 5, fails: 0 },
       deadhang: { name: 'Dead Hang',       type: 'hold',       sets: 3 },
       slrdl:    { name: 'Single-Leg RDL',  type: 'unilateral', weight: 15, increment: 5,  sets: 2, reps: 8, fails: 0 },
+    },
+    program: {
+      A: ['squat', 'bench', 'row', 'deadhang'],
+      B: ['squat', 'ohp', 'deadlift', 'slrdl'],
     },
     nextWorkout: 'A',
     history: [],
@@ -31,6 +30,7 @@ function loadState() {
     Object.entries(defaults.exercises).forEach(([id, ex]) => {
       if (!parsed.exercises[id]) parsed.exercises[id] = ex;
     });
+    if (!parsed.program) parsed.program = defaults.program;
     if (!parsed.history) parsed.history = [];
     if (!parsed.nextWorkout) parsed.nextWorkout = 'A';
     return parsed;
@@ -54,6 +54,17 @@ function todayStr() {
 function formatDate(iso) {
   const d = new Date(iso);
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function slugify(name) {
+  const base = name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'exercise';
+  let id = base;
+  let n = 2;
+  while (state.exercises[id]) {
+    id = `${base}-${n}`;
+    n++;
+  }
+  return id;
 }
 
 let state = loadState();
@@ -88,6 +99,12 @@ function exerciseSubtitle(ex) {
   return `${ex.sets} ${ex.sets === 1 ? 'set' : 'sets'} × ${ex.reps} reps`;
 }
 
+function repButtons(target, selected) {
+  return Array.from({ length: target + 1 }).map((_, v) => `
+    <button type="button" class="rep-btn${v === selected ? ' active' : ''}" data-value="${v}">${v}</button>
+  `).join('');
+}
+
 function renderExerciseCard(id) {
   const ex = state.exercises[id];
 
@@ -104,21 +121,24 @@ function renderExerciseCard(id) {
     setInputs = Array.from({ length: ex.sets }).map((_, i) => `
       <div class="set-input-wrap">
         <label>Set ${i + 1} L</label>
-        <input class="rep-input" type="number" inputmode="numeric" min="0" max="30"
-               value="${ex.reps}" data-exercise="${id}" data-set="${i}" data-side="L">
+        <div class="rep-picker" data-exercise="${id}" data-set="${i}" data-side="L" data-value="${ex.reps}">
+          ${repButtons(ex.reps, ex.reps)}
+        </div>
       </div>
       <div class="set-input-wrap">
         <label>Set ${i + 1} R</label>
-        <input class="rep-input" type="number" inputmode="numeric" min="0" max="30"
-               value="${ex.reps}" data-exercise="${id}" data-set="${i}" data-side="R">
+        <div class="rep-picker" data-exercise="${id}" data-set="${i}" data-side="R" data-value="${ex.reps}">
+          ${repButtons(ex.reps, ex.reps)}
+        </div>
       </div>
     `).join('');
   } else {
     setInputs = Array.from({ length: ex.sets }).map((_, i) => `
       <div class="set-input-wrap">
         <label>Set ${i + 1}</label>
-        <input class="rep-input" type="number" inputmode="numeric" min="0" max="20"
-               value="${ex.reps}" data-exercise="${id}" data-set="${i}">
+        <div class="rep-picker" data-exercise="${id}" data-set="${i}" data-value="${ex.reps}">
+          ${repButtons(ex.reps, ex.reps)}
+        </div>
       </div>
     `).join('');
   }
@@ -144,7 +164,15 @@ function renderExerciseCard(id) {
 
 function renderToday() {
   const day = state.nextWorkout;
-  const exerciseIds = DAY_EXERCISES[day];
+  const exerciseIds = state.program[day] || [];
+
+  if (exerciseIds.length === 0) {
+    return `
+      <h2>Workout ${day}</h2>
+      <div class="empty-state">No exercises assigned to Day ${day} yet.<br>Add some in Settings.</div>
+    `;
+  }
+
   const cards = exerciseIds.map(renderExerciseCard).join('');
 
   return `
@@ -200,37 +228,84 @@ function renderHistory() {
   return entries;
 }
 
-function renderSettings() {
-  const rows = Object.entries(state.exercises).map(([id, ex]) => {
-    if (ex.type === 'hold') {
-      return `
-        <div class="settings-row">
-          <span>${ex.name}</span>
-          <span class="subtext">bodyweight &middot; logged only</span>
-        </div>
-      `;
-    }
-    return `
-      <div class="settings-row">
-        <span>${ex.name}</span>
-        <div class="fields">
-          <div>
-            <label>Weight</label>
-            <input class="weight-input" type="number" step="5" min="0" value="${ex.weight}" data-setting-weight="${id}">
-          </div>
-          <div>
-            <label>+ per win</label>
-            <input class="weight-input" type="number" step="5" min="0" value="${ex.increment}" data-setting-increment="${id}">
-          </div>
-        </div>
+function renderSettingsExerciseRow(id) {
+  const ex = state.exercises[id];
+  const inA = state.program.A.includes(id);
+  const inB = state.program.B.includes(id);
+
+  const weightFields = ex.type === 'hold' ? '' : `
+    <div class="fields">
+      <div>
+        <label>Weight</label>
+        <input class="weight-input" type="number" step="5" min="0" value="${ex.weight}" data-setting-weight="${id}">
       </div>
-    `;
-  }).join('');
+      <div>
+        <label>+ per win</label>
+        <input class="weight-input" type="number" step="5" min="0" value="${ex.increment}" data-setting-increment="${id}">
+      </div>
+    </div>
+  `;
 
   return `
-    <h2>Settings</h2>
-    <p class="subtext">Adjust starting weights or progression increments any time.</p>
+    <div class="settings-row exercise-row">
+      <div class="exercise-row-top">
+        <div>
+          <div>${ex.name}</div>
+          <span class="subtext">${exerciseSubtitle(ex)}</span>
+        </div>
+        <button type="button" class="btn danger-text small" data-delete-exercise="${id}">Remove</button>
+      </div>
+      ${weightFields}
+      <div class="day-toggles">
+        <label><input type="checkbox" data-day-toggle data-exercise="${id}" data-day="A" ${inA ? 'checked' : ''}> Day A</label>
+        <label><input type="checkbox" data-day-toggle data-exercise="${id}" data-day="B" ${inB ? 'checked' : ''}> Day B</label>
+      </div>
+    </div>
+  `;
+}
+
+function renderSettings() {
+  const rows = Object.keys(state.exercises).map(renderSettingsExerciseRow).join('');
+
+  return `
+    <h2>Exercises</h2>
+    <p class="subtext">Adjust weights, assign each exercise to Day A/B, or remove it.</p>
     <div class="card">${rows}</div>
+
+    <h2>Add Exercise</h2>
+    <div class="card">
+      <label>Name</label>
+      <input type="text" id="new-ex-name" placeholder="e.g. Face Pull">
+
+      <label style="margin-top:10px; display:block;">Type</label>
+      <select id="new-ex-type">
+        <option value="sets">Weighted sets</option>
+        <option value="unilateral">Per side (left/right)</option>
+        <option value="hold">Hold for time</option>
+      </select>
+
+      <div id="new-ex-sets-group" style="margin-top:10px;">
+        <label>Sets</label>
+        <input type="number" id="new-ex-sets" value="3" min="1" max="10">
+      </div>
+      <div id="new-ex-reps-group" style="margin-top:10px;">
+        <label>Reps</label>
+        <input type="number" id="new-ex-reps" value="5" min="1" max="30">
+      </div>
+      <div id="new-ex-weight-group" style="margin-top:10px;">
+        <label>Starting weight</label>
+        <input type="number" id="new-ex-weight" value="20" step="5" min="0">
+        <label style="margin-top:6px; display:block;">+ per win</label>
+        <input type="number" id="new-ex-increment" value="5" step="5" min="0">
+      </div>
+
+      <div class="day-toggles" style="margin-top:12px;">
+        <label><input type="checkbox" id="new-ex-day-a"> Day A</label>
+        <label><input type="checkbox" id="new-ex-day-b"> Day B</label>
+      </div>
+
+      <button class="btn secondary" id="add-exercise-btn" style="margin-top:14px;">Add Exercise</button>
+    </div>
 
     <h2>Backup</h2>
     <p class="subtext">Everything is stored only on this device. Export regularly so you never lose your history.</p>
@@ -250,6 +325,14 @@ function attachHandlers() {
   const finishBtn = document.getElementById('finish-btn');
   if (finishBtn) finishBtn.onclick = finishWorkout;
 
+  document.querySelectorAll('.rep-btn').forEach(btn => {
+    btn.onclick = () => {
+      const picker = btn.closest('.rep-picker');
+      picker.dataset.value = btn.dataset.value;
+      picker.querySelectorAll('.rep-btn').forEach(b => b.classList.toggle('active', b === btn));
+    };
+  });
+
   document.querySelectorAll('[data-setting-weight]').forEach(input => {
     input.onchange = () => {
       const id = input.dataset.settingWeight;
@@ -265,6 +348,47 @@ function attachHandlers() {
     };
   });
 
+  document.querySelectorAll('[data-day-toggle]').forEach(cb => {
+    cb.onchange = () => {
+      const id = cb.dataset.exercise;
+      const day = cb.dataset.day;
+      const arr = state.program[day];
+      const idx = arr.indexOf(id);
+      if (cb.checked && idx === -1) arr.push(id);
+      if (!cb.checked && idx !== -1) arr.splice(idx, 1);
+      saveState();
+    };
+  });
+
+  document.querySelectorAll('[data-delete-exercise]').forEach(btn => {
+    btn.onclick = () => {
+      const id = btn.dataset.deleteExercise;
+      const name = state.exercises[id].name;
+      if (!confirm(`Remove ${name}? Past history stays, but it won't show up in future workouts.`)) return;
+      delete state.exercises[id];
+      ['A', 'B'].forEach(day => {
+        state.program[day] = state.program[day].filter(x => x !== id);
+      });
+      saveState();
+      showToast(`${name} removed`);
+      render();
+    };
+  });
+
+  const newExType = document.getElementById('new-ex-type');
+  if (newExType) {
+    const updateFieldVisibility = () => {
+      const isHold = newExType.value === 'hold';
+      document.getElementById('new-ex-reps-group').style.display = isHold ? 'none' : 'block';
+      document.getElementById('new-ex-weight-group').style.display = isHold ? 'none' : 'block';
+    };
+    newExType.onchange = updateFieldVisibility;
+    updateFieldVisibility();
+  }
+
+  const addExerciseBtn = document.getElementById('add-exercise-btn');
+  if (addExerciseBtn) addExerciseBtn.onclick = addExercise;
+
   const exportBtn = document.getElementById('export-btn');
   if (exportBtn) exportBtn.onclick = exportData;
 
@@ -272,9 +396,35 @@ function attachHandlers() {
   if (importFile) importFile.onchange = handleImport;
 }
 
+function addExercise() {
+  const nameInput = document.getElementById('new-ex-name');
+  const name = nameInput.value.trim();
+  if (!name) { alert('Give the exercise a name first.'); return; }
+
+  const type = document.getElementById('new-ex-type').value;
+  const sets = Number(document.getElementById('new-ex-sets').value) || 1;
+  const id = slugify(name);
+
+  const ex = { name, type, sets };
+  if (type !== 'hold') {
+    ex.reps = Number(document.getElementById('new-ex-reps').value) || 1;
+    ex.weight = Number(document.getElementById('new-ex-weight').value) || 0;
+    ex.increment = Number(document.getElementById('new-ex-increment').value) || 0;
+    ex.fails = 0;
+  }
+  state.exercises[id] = ex;
+
+  if (document.getElementById('new-ex-day-a').checked) state.program.A.push(id);
+  if (document.getElementById('new-ex-day-b').checked) state.program.B.push(id);
+
+  saveState();
+  showToast(`${name} added`);
+  render();
+}
+
 function finishWorkout() {
   const day = state.nextWorkout;
-  const exerciseIds = DAY_EXERCISES[day];
+  const exerciseIds = state.program[day] || [];
   const lifts = {};
 
   exerciseIds.forEach(id => {
@@ -295,8 +445,8 @@ function finishWorkout() {
       const repsL = [];
       const repsR = [];
       for (let i = 0; i < ex.sets; i++) {
-        repsL.push(Number(document.querySelector(`[data-exercise="${id}"][data-set="${i}"][data-side="L"]`).value) || 0);
-        repsR.push(Number(document.querySelector(`[data-exercise="${id}"][data-set="${i}"][data-side="R"]`).value) || 0);
+        repsL.push(Number(document.querySelector(`.rep-picker[data-exercise="${id}"][data-set="${i}"][data-side="L"]`).dataset.value) || 0);
+        repsR.push(Number(document.querySelector(`.rep-picker[data-exercise="${id}"][data-set="${i}"][data-side="R"]`).dataset.value) || 0);
       }
       const success = repsL.every(r => r >= ex.reps) && repsR.every(r => r >= ex.reps);
       lifts[id] = { name: ex.name, type: 'unilateral', weight: weightUsed, repsL, repsR, success };
@@ -307,9 +457,9 @@ function finishWorkout() {
     const weightInput = document.querySelector(`[data-weight-for="${id}"]`);
     const weightUsed = Number(weightInput.value) || ex.weight;
     const reps = [];
-    document.querySelectorAll(`[data-exercise="${id}"]:not([data-hold])`).forEach(input => {
-      reps.push(Number(input.value) || 0);
-    });
+    for (let i = 0; i < ex.sets; i++) {
+      reps.push(Number(document.querySelector(`.rep-picker[data-exercise="${id}"][data-set="${i}"]`).dataset.value) || 0);
+    }
     const success = reps.every(r => r >= ex.reps);
     lifts[id] = { name: ex.name, type: 'sets', weight: weightUsed, reps, success };
     progressExercise(ex, weightUsed, success);
