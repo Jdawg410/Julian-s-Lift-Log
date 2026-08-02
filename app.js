@@ -99,10 +99,12 @@ function exerciseSubtitle(ex) {
   return `${ex.sets} ${ex.sets === 1 ? 'set' : 'sets'} × ${ex.reps} reps`;
 }
 
-function repButtons(target, selected) {
-  return Array.from({ length: target + 1 }).map((_, v) => `
-    <button type="button" class="rep-btn${v === selected ? ' active' : ''}" data-value="${v}">${v}</button>
-  `).join('');
+function repStepper(value) {
+  return `
+    <button type="button" class="stepper-btn" data-delta="-1">&minus;</button>
+    <span class="stepper-value">${value}</span>
+    <button type="button" class="stepper-btn" data-delta="1">+</button>
+  `;
 }
 
 function renderExerciseCard(id) {
@@ -121,14 +123,14 @@ function renderExerciseCard(id) {
     setInputs = Array.from({ length: ex.sets }).map((_, i) => `
       <div class="set-input-wrap">
         <label>Set ${i + 1} L</label>
-        <div class="rep-picker" data-exercise="${id}" data-set="${i}" data-side="L" data-value="${ex.reps}">
-          ${repButtons(ex.reps, ex.reps)}
+        <div class="rep-stepper" data-exercise="${id}" data-set="${i}" data-side="L" data-value="${ex.reps}">
+          ${repStepper(ex.reps)}
         </div>
       </div>
       <div class="set-input-wrap">
         <label>Set ${i + 1} R</label>
-        <div class="rep-picker" data-exercise="${id}" data-set="${i}" data-side="R" data-value="${ex.reps}">
-          ${repButtons(ex.reps, ex.reps)}
+        <div class="rep-stepper" data-exercise="${id}" data-set="${i}" data-side="R" data-value="${ex.reps}">
+          ${repStepper(ex.reps)}
         </div>
       </div>
     `).join('');
@@ -136,8 +138,8 @@ function renderExerciseCard(id) {
     setInputs = Array.from({ length: ex.sets }).map((_, i) => `
       <div class="set-input-wrap">
         <label>Set ${i + 1}</label>
-        <div class="rep-picker" data-exercise="${id}" data-set="${i}" data-value="${ex.reps}">
-          ${repButtons(ex.reps, ex.reps)}
+        <div class="rep-stepper" data-exercise="${id}" data-set="${i}" data-value="${ex.reps}">
+          ${repStepper(ex.reps)}
         </div>
       </div>
     `).join('');
@@ -325,11 +327,12 @@ function attachHandlers() {
   const finishBtn = document.getElementById('finish-btn');
   if (finishBtn) finishBtn.onclick = finishWorkout;
 
-  document.querySelectorAll('.rep-btn').forEach(btn => {
+  document.querySelectorAll('.stepper-btn').forEach(btn => {
     btn.onclick = () => {
-      const picker = btn.closest('.rep-picker');
-      picker.dataset.value = btn.dataset.value;
-      picker.querySelectorAll('.rep-btn').forEach(b => b.classList.toggle('active', b === btn));
+      const stepper = btn.closest('.rep-stepper');
+      const next = Math.max(0, Number(stepper.dataset.value) + Number(btn.dataset.delta));
+      stepper.dataset.value = next;
+      stepper.querySelector('.stepper-value').textContent = next;
     };
   });
 
@@ -445,8 +448,8 @@ function finishWorkout() {
       const repsL = [];
       const repsR = [];
       for (let i = 0; i < ex.sets; i++) {
-        repsL.push(Number(document.querySelector(`.rep-picker[data-exercise="${id}"][data-set="${i}"][data-side="L"]`).dataset.value) || 0);
-        repsR.push(Number(document.querySelector(`.rep-picker[data-exercise="${id}"][data-set="${i}"][data-side="R"]`).dataset.value) || 0);
+        repsL.push(Number(document.querySelector(`.rep-stepper[data-exercise="${id}"][data-set="${i}"][data-side="L"]`).dataset.value) || 0);
+        repsR.push(Number(document.querySelector(`.rep-stepper[data-exercise="${id}"][data-set="${i}"][data-side="R"]`).dataset.value) || 0);
       }
       const success = repsL.every(r => r >= ex.reps) && repsR.every(r => r >= ex.reps);
       lifts[id] = { name: ex.name, type: 'unilateral', weight: weightUsed, repsL, repsR, success };
@@ -458,7 +461,7 @@ function finishWorkout() {
     const weightUsed = Number(weightInput.value) || ex.weight;
     const reps = [];
     for (let i = 0; i < ex.sets; i++) {
-      reps.push(Number(document.querySelector(`.rep-picker[data-exercise="${id}"][data-set="${i}"]`).dataset.value) || 0);
+      reps.push(Number(document.querySelector(`.rep-stepper[data-exercise="${id}"][data-set="${i}"]`).dataset.value) || 0);
     }
     const success = reps.every(r => r >= ex.reps);
     lifts[id] = { name: ex.name, type: 'sets', weight: weightUsed, reps, success };

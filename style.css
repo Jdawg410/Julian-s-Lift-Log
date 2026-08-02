@@ -107,30 +107,36 @@ h2 { font-size: 18px; margin: 0 0 4px; }
   color: var(--text);
 }
 
-.rep-picker {
+.rep-stepper {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  max-width: 170px;
+  align-items: center;
+  gap: 6px;
 }
 
-.rep-btn {
-  width: 30px;
-  height: 30px;
+.stepper-btn {
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
   border-radius: 6px;
   border: 1px solid var(--card-border);
   background: #0b1220;
   color: var(--text);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
   padding: 0;
 }
 
-.rep-btn.active {
+.stepper-btn:active {
   background: var(--accent);
   border-color: var(--accent);
   color: white;
+}
+
+.stepper-value {
+  min-width: 20px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
 }
 
 .btn {
