@@ -113,7 +113,7 @@ function exerciseSubtitle(ex) {
 
 function repTapButton(id, setIndex, target, side) {
   const sideAttr = side ? ` data-side="${side}"` : '';
-  return `<button type="button" class="rep-tap" data-exercise="${id}" data-set="${setIndex}"${sideAttr} data-value="0" data-target="${target}">0</button>`;
+  return `<button type="button" class="rep-tap hit" data-exercise="${id}" data-set="${setIndex}"${sideAttr} data-value="${target}" data-target="${target}">${target}</button>`;
 }
 
 function renderExerciseCard(id) {
@@ -339,8 +339,8 @@ function attachHandlers() {
   document.querySelectorAll('.rep-tap').forEach(btn => {
     btn.onclick = () => {
       const target = Number(btn.dataset.target);
-      let next = Number(btn.dataset.value) + 1;
-      if (next > target) next = 0;
+      let next = Number(btn.dataset.value) - 1;
+      if (next < 0) next = target;
       btn.dataset.value = next;
       btn.textContent = next;
       btn.classList.toggle('hit', next === target && target > 0);
