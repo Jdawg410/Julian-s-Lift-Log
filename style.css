@@ -275,3 +275,26 @@ h2 { font-size: 18px; margin: 0 0 4px; }
 .toast.show { opacity: 1; }
 
 input[type=file] { color: var(--text-dim); font-size: 13px; }
+
+#progress-exercise-select {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  background: #0b1220;
+  color: var(--text);
+  font-size: 15px;
+}
+
+.progress-stat {
+  font-size: 34px;
+  font-weight: 700;
+  margin-top: 16px;
+}
+
+.progress-chart {
+  width: 100%;
+  height: auto;
+  margin-top: 14px;
+}

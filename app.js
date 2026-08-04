@@ -71,6 +71,7 @@ function slugify(name) {
 
 let state = loadState();
 let activeTab = 'today';
+let progressExerciseId = null;
 
 function showToast(msg) {
   const el = document.createElement('div');
@@ -101,6 +102,7 @@ function render() {
   const view = document.getElementById('view');
   if (activeTab === 'today') view.innerHTML = renderToday();
   else if (activeTab === 'history') view.innerHTML = renderHistory();
+  else if (activeTab === 'progress') view.innerHTML = renderProgress();
   else view.innerHTML = renderSettings();
   attachHandlers();
 }
@@ -185,6 +187,87 @@ function renderToday() {
     <p class="subtext">${todayStr()} &middot; ${exerciseIds.map(id => state.exercises[id].name).join(' / ')}</p>
     ${cards}
     <button class="btn" id="finish-btn">Finish Workout</button>
+  `;
+}
+
+function progressExerciseOptions() {
+  const seen = {};
+  state.history.forEach(entry => {
+    Object.entries(entry.lifts).forEach(([id, lift]) => {
+      if (!seen[id]) seen[id] = lift.name;
+    });
+  });
+  return seen;
+}
+
+function historyPointsFor(exerciseId) {
+  const points = [];
+  state.history.forEach(entry => {
+    const lift = entry.lifts[exerciseId];
+    if (!lift) return;
+    const value = lift.type === 'hold' ? Math.max(...lift.times) : lift.weight;
+    points.push({ date: entry.date, value });
+  });
+  return points;
+}
+
+function buildProgressChart(points) {
+  const W = 320, H = 160, padL = 8, padR = 8, padT = 16, padB = 24;
+  const values = points.map(p => p.value);
+  let min = Math.min(...values);
+  let max = Math.max(...values);
+  if (min === max) { min -= 5; max += 5; }
+  const xStep = points.length > 1 ? (W - padL - padR) / (points.length - 1) : 0;
+  const xFor = i => points.length > 1 ? padL + i * xStep : W / 2;
+  const yFor = v => padT + (H - padT - padB) * (1 - (v - min) / (max - min));
+
+  const linePts = points.map((p, i) => `${xFor(i)},${yFor(p.value)}`).join(' ');
+  const dots = points.map((p, i) => `<circle cx="${xFor(i)}" cy="${yFor(p.value)}" r="3" fill="var(--accent)" />`).join('');
+  const firstDate = formatDate(points[0].date);
+  const lastDate = formatDate(points[points.length - 1].date);
+
+  return `
+    <svg viewBox="0 0 ${W} ${H}" class="progress-chart">
+      <polyline points="${linePts}" fill="none" stroke="var(--accent)" stroke-width="2" />
+      ${dots}
+      <text x="${padL}" y="${H - 6}" font-size="9" fill="var(--text-dim)">${firstDate}</text>
+      <text x="${W - padR}" y="${H - 6}" font-size="9" fill="var(--text-dim)" text-anchor="end">${lastDate}</text>
+    </svg>
+  `;
+}
+
+function renderProgress() {
+  const options = progressExerciseOptions();
+  const ids = Object.keys(options);
+
+  if (ids.length === 0) {
+    return `<div class="empty-state">No workouts logged yet.<br>Finish a workout to start tracking progress.</div>`;
+  }
+
+  if (!progressExerciseId || !options[progressExerciseId]) progressExerciseId = ids[0];
+
+  const points = historyPointsFor(progressExerciseId);
+  const isHold = state.history.find(e => e.lifts[progressExerciseId])?.lifts[progressExerciseId].type === 'hold';
+  const unit = isHold ? 's' : ' lb';
+
+  const current = points[points.length - 1].value;
+  const first = points[0].value;
+  const delta = current - first;
+  const deltaText = points.length > 1
+    ? `${delta >= 0 ? '+' : ''}${delta}${unit} since first logged`
+    : 'First session logged';
+
+  const optionsHtml = ids.map(id => `<option value="${id}" ${id === progressExerciseId ? 'selected' : ''}>${options[id]}</option>`).join('');
+
+  return `
+    <h2>Progress</h2>
+    <p class="subtext">Track how each exercise has moved over time.</p>
+    <div class="card">
+      <select id="progress-exercise-select">${optionsHtml}</select>
+      <div class="progress-stat">${current}${unit}</div>
+      <p class="subtext">${deltaText}</p>
+      ${buildProgressChart(points)}
+    </div>
   `;
 }
 
@@ -402,6 +485,14 @@ function attachHandlers() {
 
   const addExerciseBtn = document.getElementById('add-exercise-btn');
   if (addExerciseBtn) addExerciseBtn.onclick = addExercise;
+
+  const progressSelect = document.getElementById('progress-exercise-select');
+  if (progressSelect) {
+    progressSelect.onchange = () => {
+      progressExerciseId = progressSelect.value;
+      render();
+    };
+  }
 
   const userNameInput = document.getElementById('user-name-input');
   if (userNameInput) {
